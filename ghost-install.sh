@@ -24,8 +24,8 @@ mount /dev/sdb1 /mnt/gentoo/var/tmp/portage
 # Phần 3: Tải stage3
 echo "3. Tải Stage3..."
 cd /mnt/gentoo
-wget -c https://mirror.freedif.org/gentoo/releases/amd64/autobuilds/current-stage3-amd64-hardened-selinux-openrc/stage3-amd64-hardened-selinux-openrc-20251130T164554Z.tar.xz
-wget -c https://distfiles.gentoo.org/snapshots/portage-latest.tar.xz
+wget -c https://mirror.meowsmp.net/gentoo/releases/amd64/autobuilds/current-stage3-amd64-hardened-selinux-openrc/stage3-amd64-hardened-selinux-openrc-20251130T164554Z.tar.xz
+wget -c https://mirror.meowsmp.net/gentoo/snapshots/portage-latest.tar.xz
 tar xpf stage3-*.tar.xz --xattrs-include="*.*" --numeric-owner
 tar xpf portage-latest.tar.xz -C usr
 
