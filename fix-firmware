@@ -1,0 +1,3 @@
+# Dòng 61-63
+echo "sys-kernel/linux-firmware linux-fw-redistributable" > /etc/portage/package.license/linux-firmware
+echo "=sys-kernel/linux-firmware-20250808" > /etc/portage/package.unmask/linux-firmware
