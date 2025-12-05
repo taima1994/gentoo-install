@@ -1,106 +1,205 @@
 #!/bin/bash
 # ========================================
-# FIX DÙNG GENTOO GIT TRỰC TIẾP
+# GHOST GENTOO - INSTALLER FINAL
+# Chạy trong chroot (live~#)
 # ========================================
 
 set -e
 
-# 1. CẤU HÌNH PORTAGE ĐƠN GIẢN
-echo "Cấu hình Portage đơn giản..."
-cat > /etc/portage/make.conf << 'EOF'
-MAKEOPTS="-j1"
-FEATURES="-sandbox -usersandbox"
-EMERGE_DEFAULT_OPTS="--jobs=1 --with-bdeps=n"
-USE="minimal"
-ACCEPT_LICENSE="*"
+echo "🔥 BẮT ĐẦU CÀI ĐẶT GHOST GENTOO"
+
+# ========== PHẦN 1: FIX PORTAGE & CÀI CÔNG CỤ CƠ BẢN ==========
+echo "1. Fix Portage và cài công cụ cơ bản..."
+
+# Kiểm tra và tạo thư mục
+mkdir -p /etc/portage/repos.conf
+mkdir -p /var/db/repos/gentoo
+
+# Tải Portage tree nếu chưa có
+if [ ! -f "/var/db/repos/gentoo/profiles/repo_name" ]; then
+    echo "  → Tải Portage tree..."
+    cd /var/db/repos/gentoo
+    wget -q https://mirror.meowsmp.net/gentoo/snapshots/portage-latest.tar.xz
+    tar xpf portage-latest.tar.xz --strip-components=1
+    rm -f portage-latest.tar.xz
+fi
+
+# Cấu hình repository
+cat > /etc/portage/repos.conf/gentoo.conf << 'EOF'
+[gentoo]
+location = /var/db/repos/gentoo
+sync-type = rsync
+sync-uri = rsync://rsync.gentoo.org/gentoo-portage
 EOF
 
-# 2. TẢI VÀ CÀI KERNEL BẰNG TAY TỪ GIT GENTOO
-echo "Tải kernel sources từ git gentoo..."
-cd /usr/src
-wget -q https://gitweb.gentoo.org/repo/gentoo.git/plain/sys-kernel/gentoo-sources/gentoo-sources-6.11.5.ebuild
-ebuild gentoo-sources-6.11.5.ebuild manifest
-ebuild gentoo-sources-6.11.5.ebuild unpack
+# Cài MAKE bằng tay nếu cần
+if ! command -v make &> /dev/null; then
+    echo "  → Cài make bằng tay..."
+    cd /tmp
+    wget -q https://ftp.gnu.org/gnu/make/make-4.4.1.tar.gz
+    tar xzf make-4.4.1.tar.gz
+    cd make-4.4.1
+    ./configure --prefix=/usr
+    make -j1
+    make install
+fi
 
-# Tạo symlink
-ln -sf /usr/src/linux-* /usr/src/linux || ln -sf /usr/src/linux-6.* /usr/src/linux
+# ========== PHẦN 2: CÀI KERNEL ==========
+echo "2. Cài kernel..."
 
-# 3. TẢI FIRMWARE TRỰC TIẾP
-echo "Tải firmware từ kernel.org..."
+# Tải kernel binary trực tiếp
+cd /boot
+echo "  → Tải kernel binary..."
+wget -q https://mirror.meowsmp.net/gentoo/releases/amd64/autobuilds/current-stage3-amd64-hardened-selinux-openrc/stage3-amd64-hardened-selinux-openrc-20251130T164554Z.tar.xz
+tar xf stage3-*.tar.xz ./boot/vmlinuz-* ./boot/System.map-* --strip-components=2
+mv vmlinuz-* vmlinuz 2>/dev/null || true
+rm -f stage3-*.tar.xz
+
+# ========== PHẦN 3: CÀI FIRMWARE ==========
+echo "3. Cài firmware..."
+
 cd /lib
 mkdir -p firmware
 cd firmware
-
-# Tải firmware ổn định từ kernel.org (bản gốc)
 wget -q https://mirrors.edge.kernel.org/pub/linux/kernel/firmware/linux-firmware-20250808.tar.xz
 tar xf linux-firmware-20250808.tar.xz --strip-components=1
 rm linux-firmware-20250808.tar.xz
 
-# 4. COMPILE KERNEL ĐƠN GIẢN
-echo "Compile kernel minimal..."
-cd /usr/src/linux
-
-# Dùng config mặc định
-make defconfig
-
-# Chỉ bật options tối thiểu
-./scripts/config --disable DEBUG_INFO
-./scripts/config --set-val CONFIG_MODULES y
-./scripts/config --set-val CONFIG_BLK_DEV_INITRD y
-
-make -j1
-make modules_install
-make install
-
-# 5. CÀI CÁC GÓI CƠ BẢN TỪ GIT
-echo "Cài packages cơ bản..."
-
-# Tạo overlay tạm
-mkdir -p /var/db/repos/local/{metadata,profiles}
-echo "local" > /var/db/repos/local/profiles/repo_name
-cat > /var/db/repos/local/metadata/layout.conf << 'EOF'
-masters = gentoo
-thin-manifests = true
-EOF
-
-# 6. CÀI GRUB ĐƠN GIẢN
-echo "Cài GRUB..."
-cat > /tmp/grub.ebuild << 'EOF'
-EAPI=8
-inherit toolchain-funcs
-DESCRIPTION="GRUB Bootloader"
-SRC_URI="https://ftp.gnu.org/gnu/grub/grub-2.12.tar.xz"
-SLOT="0"
-EOF
+# ========== PHẦN 4: CÀI GRUB ==========
+echo "4. Cài GRUB..."
 
 cd /tmp
-wget https://ftp.gnu.org/gnu/grub/grub-2.12.tar.xz
+wget -q https://ftp.gnu.org/gnu/grub/grub-2.12.tar.xz
 tar xf grub-2.12.tar.xz
 cd grub-2.12
+./configure --prefix=/usr --disable-werror
+make -j1
+make install
+
+# Cài đặt GRUB vào MBR
+grub-install /dev/sda
+
+# Tạo file cấu hình GRUB đơn giản
+cat > /boot/grub/grub.cfg << 'EOF'
+set timeout=5
+set default=0
+
+menuentry "Ghost Gentoo" {
+    insmod ext2
+    set root=(hd0,1)
+    linux /boot/vmlinuz root=/dev/sda1 ro quiet
+}
+EOF
+
+# ========== PHẦN 5: CẤU HÌNH HỆ THỐNG ==========
+echo "5. Cấu hình hệ thống..."
+
+# FSTAB
+cat > /etc/fstab << 'EOF'
+/dev/sda1    /               ext4    defaults,noatime    0 1
+/dev/sda2    /home           ext4    defaults,noatime    0 2
+/dev/sdb1    /var/tmp/portage ext4  defaults,noatime    0 2
+EOF
+
+# HOSTNAME
+echo "ghost-pc" > /etc/hostname
+cat > /etc/hosts << 'EOF'
+127.0.0.1   localhost
+::1         localhost
+127.0.1.1   ghost-pc.localdomain ghost-pc
+EOF
+
+# TIMEZONE
+echo "Asia/Ho_Chi_Minh" > /etc/timezone
+
+# ========== PHẦN 6: TẠO USER ==========
+echo "6. Tạo user..."
+
+useradd -m -G wheel,audio,video ghost
+echo "🔐 NHẬP MẬT KHẨU CHO USER 'ghost':"
+passwd ghost
+
+# SUDO
+echo "%wheel ALL=(ALL) ALL" > /etc/sudoers.d/10-wheel
+chmod 440 /etc/sudoers.d/10-wheel
+
+# ========== PHẦN 7: CÀI NETWORK CƠ BẢN ==========
+echo "7. Cài network cơ bản..."
+
+cd /tmp
+wget -q https://www.infradead.org/~tgr/dhcpcd/dhcpcd-10.0.2.tar.gz
+tar xzf dhcpcd-10.0.2.tar.gz
+cd dhcpcd-10.0.2
 ./configure --prefix=/usr
 make -j1
 make install
 
-# 7. CÀI ĐẶT GRUB
-grub-install /dev/sda
-grub-mkconfig -o /boot/grub/grub.cfg
+# ========== PHẦN 8: CÀI CÔNG CỤ CƠ BẢN ==========
+echo "8. Cài công cụ cơ bản..."
 
-# 8. CẤU HÌNH HỆ THỐNG
-echo "Cấu hình cơ bản..."
-echo "ghost-pc" > /etc/hostname
-cat > /etc/fstab << 'EOF'
-/dev/sda1    /    ext4    defaults    1 1
-/dev/sda2    /home    ext4    defaults    0 2
+# Cài bash nếu cần
+if [ ! -f "/bin/bash" ]; then
+    cd /tmp
+    wget -q https://ftp.gnu.org/gnu/bash/bash-5.2.tar.gz
+    tar xzf bash-5.2.tar.gz
+    cd bash-5.2
+    ./configure --prefix=/usr
+    make -j1
+    make install
+fi
+
+# ========== PHẦN 9: CẤU HÌNH DỊCH VỤ ==========
+echo "9. Cấu hình dịch vụ..."
+
+rc-update add dhcpcd default
+
+# ========== PHẦN 10: TẠO INITRAMFS ==========
+echo "10. Tạo initramfs..."
+
+cd /boot
+mkinitramfs -o initramfs.img $(ls /lib/modules/ 2>/dev/null | head -1) 2>/dev/null || true
+
+# ========== PHẦN 11: HOÀN TẤT ==========
+echo "✅ HOÀN TẤT CÀI ĐẶT!"
+
+cat << 'EOF'
+
+========================================
+🎉 GHOST GENTOO - CÀI ĐẶT THÀNH CÔNG!
+========================================
+
+📋 LỆNH ĐỂ THOÁT VÀ REBOOT:
+1. exit                          # Thoát chroot
+2. umount -R /mnt/gentoo         # Unmount
+3. reboot                        # Khởi động lại
+
+💡 SAU KHI BOOT:
+- Đăng nhập với user: ghost
+- Mật khẩu: (mật khẩu bạn vừa đặt)
+- Để có mạng: sudo dhcpcd eth0
+- Để cài thêm gói: sudo emerge [tên-gói]
+
+🔧 HỆ THỐNG ĐÃ CÀI:
+- Kernel: Binary từ stage3
+- Firmware: 20250808
+- Bootloader: GRUB 2.12
+- Network: dhcpcd
+- User: ghost (sudo enabled)
+
+========================================
 EOF
 
-# 9. TẠO USER
-useradd -m -G wheel ghost
-echo "Nhập mật khẩu cho ghost:"
-passwd ghost
-
-echo "========================================"
-echo "FIX HOÀN TẤT!"
-echo "Thoát chroot và reboot:"
-echo "exit"
-echo "umount -R /mnt/gentoo"
-echo "reboot"
+# Lưu thông tin cài đặt
+cat > /root/install-info.txt << EOF
+GHOST GENTOO - INSTALLATION COMPLETE
+====================================
+Installation Date: $(date)
+User: ghost
+Hostname: ghost-pc
+Timezone: Asia/Ho_Chi_Minh
+Kernel: $(ls /boot/vmlinuz* 2>/dev/null || echo "binary")
+Firmware: 20250808
+Boot Method: BIOS/MBR
+Network: dhcpcd
+====================================
+EOF
