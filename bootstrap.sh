@@ -2,4 +2,11 @@
 set -e
 echo "GHOST 2025 - GENTOO INSTALL"
 echo "Tải và chạy installer..."
-wget https://raw.githubusercontent.com/taima1994/gentoo-install/main/ghost-install.sh
+# 1. Tải script
+wget https://raw.githubusercontent.com/taima1994/gentoo-ghost-installer/main/ghost-install.sh
+
+# 2. Cấp quyền thực thi
+chmod +x ghost-install.sh
+
+# 3. Chạy với quyền root
+sudo ./ghost-install.sh
