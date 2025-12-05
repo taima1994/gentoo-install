@@ -1,344 +1,174 @@
-# ==============================================================================
-# PHẦN 4: CHUẨN BỊ CHROOT
-# ==============================================================================
-echo "🏗️  4. Chuẩn bị chroot..."
-
-# Mount các filesystem cần thiết
-mount --types proc /proc $WORKDIR/proc
-mount --rbind /sys $WORKDIR/sys
-mount --make-rslave $WORKDIR/sys
-mount --rbind /dev $WORKDIR/dev
-mount --make-rslave $WORKDIR/dev
-cp -L /etc/resolv.conf $WORKDIR/etc/
-
-# ==============================================================================
-# PHẦN 5: SCRIPT CHROOT - HOÀN CHỈNH VỚI TẤT CẢ FIX
-# ==============================================================================
-cat > $WORKDIR/install-inside.sh << 'CHROOT_EOF'
 #!/bin/bash
-set -euo pipefail
+# ========================================
+# FIX PORTAGE & CÀI ĐẶT TỐI THIỂU
+# Chạy trong chroot (live~#)
+# ========================================
 
-# ==============================================================================
-# CẤU HÌNH
-# ==============================================================================
-TARGET_USER="ghost"
-HOSTNAME="ghost-pc"
-TIMEZONE="Asia/Ho_Chi_Minh"
-LOCALE="vi_VN.UTF-8"
-KEYMAP="us"
+set -e
 
-echo "========================================"
-echo "🚀 GHOST 2025 - CÀI ĐẶT TRONG CHROOT"
-echo "========================================"
+echo "🚀 BẮT ĐẦU FIX PORTAGE VÀ CÀI ĐẶT CƠ BẢN"
 
-# ==============================================================================
-# 1. FIX CƠ BẢN & CẤU HÌNH PORTAGE
-# ==============================================================================
-echo "🔧 [1/12] Cấu hình Portage và fix lỗi cơ bản..."
+# 1. KIỂM TRA VÀ SỬA CẤU TRÚC THƯ MỤC
+echo "1. Kiểm tra cấu trúc thư mục..."
+mkdir -p /etc/portage/repos.conf
+mkdir -p /var/db/repos/gentoo
 
-# TẮT SANDBOX - FIX LỖI SANDBOX
-cat > /etc/portage/make.conf << 'MAKE_CONF_EOF'
-MAKEOPTS="-j2"
-EMERGE_DEFAULT_OPTS="--jobs=2 --load-average=2"
-USE="hardened selinux X wayland pulseaudio dbus elogind networkmanager -openmp"
-VIDEO_CARDS="amdgpu radeonsi"
-INPUT_DEVICES="libinput"
-GRUB_PLATFORMS="efi-64"
-FEATURES="-sandbox -usersandbox parallel-fetch"
-ACCEPT_LICENSE="*"
-MAKE_CONF_EOF
+# 2. TẢI LẠI PORTAGE TREE TỪ ĐẦU
+echo "2. Tải lại Portage tree..."
+cd /var/db/repos/gentoo
+rm -rf *
+wget -q --show-progress https://mirror.meowsmp.net/gentoo/snapshots/portage-latest.tar.xz
+tar xpf portage-latest.tar.xz --strip-components=1
+rm -f portage-latest.tar.xz
 
-# Tạo thư mục package.*
-mkdir -p /etc/portage/package.{use,unmask,license,accept_keywords}
+# 3. CẤU HÌNH REPOSITORY
+echo "3. Cấu hình repository..."
+cat > /etc/portage/repos.conf/gentoo.conf << 'EOF'
+[gentoo]
+location = /var/db/repos/gentoo
+sync-type = rsync
+sync-uri = rsync://rsync.gentoo.org/gentoo-portage
+auto-sync = yes
+EOF
 
-# FIX LỖI GETTEXT OPENMP
-echo "sys-devel/gettext -openmp" > /etc/portage/package.use/gettext
-
-# FIX LỖI HYPRLAND
-cat > /etc/portage/package.use/hyprland-fix << 'USE_EOF'
-gui-wm/hyprland -systemd
-x11-terms/kitty -wayland
-media-libs/freetype harfbuzz
-x11-libs/libdrm video_cards_radeon
-kde-frameworks/solid qml
-dev-qt/qtbase opengl
-dev-qt/qtdeclarative opengl
-app-text/ghostscript -jpeg2k
-USE_EOF
-
-# ==============================================================================
-# 2. CẬP NHẬT PORTAGE & CÀI CÔNG CỤ CƠ BẢN
-# ==============================================================================
-echo "📦 [2/12] Cập nhật Portage và cài công cụ cơ bản..."
-
-emerge-webrsync
-
-# Cài compiler và tools cơ bản trước
-emerge -v1 sys-devel/gcc sys-devel/binutils sys-devel/make sys-libs/glibc
-gcc-config 1
-source /etc/profile
-
-# ==============================================================================
-# 3. CÀI FIRMWARE TRỰC TIẾP TỪ KERNEL.ORG
-# ==============================================================================
-echo "💾 [3/12] Cài đặt firmware..."
-
-# Tạo rule cho firmware
-echo "sys-kernel/linux-firmware linux-fw-redistributable" > /etc/portage/package.license/linux-firmware
-echo "=sys-kernel/linux-firmware-20250808" > /etc/portage/package.unmask/linux-firmware
-
-# Nếu emerge lỗi, tải firmware bằng tay
-if ! emerge =sys-kernel/linux-firmware-20250808; then
-    echo "⚠️  Emerge firmware thất bại, tải bằng tay từ kernel.org..."
-    cd /lib
-    mkdir -p firmware
-    cd firmware
-    wget -q https://mirrors.edge.kernel.org/pub/linux/kernel/firmware/linux-firmware-20250808.tar.xz
-    tar xf linux-firmware-20250808.tar.xz --strip-components=1
-    rm linux-firmware-20250808.tar.xz
+# 4. CHỌN PROFILE ĐƠN GIẢN
+echo "4. Chọn profile..."
+# Dùng profile tối thiểu nhất
+if [ -f "/var/db/repos/gentoo/profiles/default/linux/amd64/17.1/desktop" ]; then
+    ln -sf /var/db/repos/gentoo/profiles/default/linux/amd64/17.1/desktop /etc/portage/make.profile
+else
+    # Chọn profile đầu tiên có sẵn
+    FIRST_PROFILE=$(find /var/db/repos/gentoo/profiles -name "make.default" | head -1)
+    if [ -n "$FIRST_PROFILE" ]; then
+        PROFILE_DIR=$(dirname "$FIRST_PROFILE")
+        ln -sf "$PROFILE_DIR" /etc/portage/make.profile
+    fi
 fi
 
-# ==============================================================================
-# 4. CÀI VÀ COMPILE KERNEL
-# ==============================================================================
-echo "🐧 [4/12] Cài đặt và compile kernel..."
+# 5. CÀI PORTAGE BẰNG TAY
+echo "5. Cài đặt Portage bằng tay..."
+cd /tmp
+wget -q https://mirror.meowsmp.net/gentoo/distfiles/portage-3.0.72.tar.xz
+tar xf portage-3.0.72.tar.xz
+cd portage-3.0.72
+python3 setup.py install --system --no-prefix
 
-# Cài kernel sources từ git gentoo
-emerge sys-kernel/gentoo-sources
+# 6. CÀI CÁC GÓI CƠ BẢN BẰNG TAY
+echo "6. Cài các gói cơ bản..."
 
-# Đảm bảo có symlink kernel
-eselect kernel list 2>/dev/null || true
-cd /usr/src
-if [ ! -d "linux" ]; then
-    ln -s linux-* linux 2>/dev/null || ln -s linux-6.* linux
-fi
-
-# Compile kernel đơn giản
-cd /usr/src/linux
-make defconfig
-
-# Bật options cần thiết
-./scripts/config --set-val CONFIG_MODULES y
-./scripts/config --set-val CONFIG_BLK_DEV_INITRD y
-./scripts/config --set-val CONFIG_DEVTMPFS y
-./scripts/config --set-val CONFIG_DEVTMPFS_MOUNT y
-
-# Compile với 2 jobs để tránh lỗi
-make -j2
-make modules_install
+# Tải và cài make
+cd /tmp
+wget -q https://ftp.gnu.org/gnu/make/make-4.4.1.tar.gz
+tar xzf make-4.4.1.tar.gz
+cd make-4.4.1
+./configure --prefix=/usr
+make -j1
 make install
 
-# ==============================================================================
-# 5. CẬP NHẬT HỆ THỐNG
-# ==============================================================================
-echo "🔄 [5/12] Cập nhật hệ thống..."
+# Tải và cài bash
+cd /tmp
+wget -q https://ftp.gnu.org/gnu/bash/bash-5.2.tar.gz
+tar xzf bash-5.2.tar.gz
+cd bash-5.2
+./configure --prefix=/usr
+make -j1
+make install
 
-emerge --update --deep --newuse @world
+# 7. CÀI KERNEL BINARY (KHÔNG CẦN COMPILE)
+echo "7. Cài kernel binary..."
+mkdir -p /etc/portage/package.accept_keywords
+echo "sys-kernel/gentoo-kernel-bin ~amd64" > /etc/portage/package.accept_keywords/kernel-bin
 
-# ==============================================================================
-# 6. CẤU HÌNH HỆ THỐNG CƠ BẢN
-# ==============================================================================
-echo "⚙️  [6/12] Cấu hình hệ thống cơ bản..."
+emerge --oneshot --nodeps sys-kernel/gentoo-kernel-bin 2>/dev/null || \
+echo "⚠️  Không thể emerge kernel, tải binary trực tiếp..."
 
-# FSTAB
-cat > /etc/fstab << 'FSTAB_EOF'
-/dev/sda1    /               ext4    noatime,errors=remount-ro    0 1
-/dev/sda2    /home           ext4    defaults,noatime             0 2
-/dev/sdb1    /var/tmp/portage ext4  defaults,noatime              0 2
-tmpfs        /tmp            tmpfs   defaults,noatime,nosuid,nodev 0 0
-FSTAB_EOF
+# Tải kernel binary nếu emerge lỗi
+if [ ! -f "/boot/vmlinuz" ]; then
+    cd /boot
+    wget -q https://mirror.meowsmp.net/gentoo/releases/amd64/autobuilds/current-stage3-amd64-hardened-selinux-openrc/stage3-amd64-hardened-selinux-openrc-20251130T164554Z.tar.xz
+    tar xf stage3-*.tar.xz ./boot/vmlinuz-* --strip-components=2
+    mv vmlinuz-* vmlinuz
+fi
 
-# Hostname
-echo "$HOSTNAME" > /etc/hostname
-cat > /etc/hosts << 'HOSTS_EOF'
-127.0.0.1   localhost
-::1         localhost
-127.0.1.1   $HOSTNAME.localdomain $HOSTNAME
-HOSTS_EOF
+# 8. CÀI FIRMWARE BẰNG TAY
+echo "8. Cài firmware..."
+cd /lib
+mkdir -p firmware
+cd firmware
+wget -q https://mirrors.edge.kernel.org/pub/linux/kernel/firmware/linux-firmware-20250808.tar.xz
+tar xf linux-firmware-20250808.tar.xz --strip-components=1
+rm linux-firmware-20250808.tar.xz
 
-# Timezone
-echo "$TIMEZONE" > /etc/timezone
-emerge --config sys-libs/timezone-data
+# 9. CÀI GRUB BẰNG TAY
+echo "9. Cài GRUB..."
+cd /tmp
+wget -q https://ftp.gnu.org/gnu/grub/grub-2.12.tar.xz
+tar xf grub-2.12.tar.xz
+cd grub-2.12
+./configure --prefix=/usr --disable-werror
+make -j1
+make install
 
-# Locale
-echo "vi_VN.UTF-8 UTF-8" >> /etc/locale.gen
-echo "en_US.UTF-8 UTF-8" >> /etc/locale.gen
-locale-gen
-eselect locale set vi_VN.utf8
-env-update && source /etc/profile
-
-# Keymap
-echo "keymap=\"$KEYMAP\"" > /etc/conf.d/keymaps
-
-# ==============================================================================
-# 7. CÀI ĐẶT GRUB
-# ==============================================================================
-echo "👢 [7/12] Cài đặt GRUB..."
-
-emerge sys-boot/grub
-
-# Cài GRUB cho BIOS
 grub-install /dev/sda
-
-# Tạo config GRUB
 grub-mkconfig -o /boot/grub/grub.cfg
 
-# ==============================================================================
-# 8. TẠO NGƯỜI DÙNG VÀ CẤU HÌNH SUDO
-# ==============================================================================
-echo "👤 [8/12] Tạo người dùng..."
+# 10. CẤU HÌNH HỆ THỐNG CƠ BẢN
+echo "10. Cấu hình hệ thống..."
 
-useradd -m -G wheel,audio,video,portage,usb,cdrom $TARGET_USER
-echo "🔐 Nhập mật khẩu cho user '$TARGET_USER' (nhập mật khẩu mạnh):"
-passwd $TARGET_USER
+# FSTAB
+cat > /etc/fstab << 'EOF'
+/dev/sda1    /               ext4    defaults,noatime    0 1
+/dev/sda2    /home           ext4    defaults,noatime    0 2
+/dev/sdb1    /var/tmp/portage ext4  defaults,noatime    0 2
+EOF
+
+# Hostname
+echo "ghost-pc" > /etc/hostname
+cat > /etc/hosts << 'EOF'
+127.0.0.1   localhost
+::1         localhost
+127.0.1.1   ghost-pc.localdomain ghost-pc
+EOF
+
+# Tạo user
+echo "11. Tạo user..."
+useradd -m -G wheel ghost
+echo "🔐 NHẬP MẬT KHẨU CHO USER 'ghost':"
+passwd ghost
 
 # Cấu hình sudo
 echo "%wheel ALL=(ALL) ALL" > /etc/sudoers.d/10-wheel
 chmod 440 /etc/sudoers.d/10-wheel
 
-# ==============================================================================
-# 9. CÀI ĐẶT MÔI TRƯỜNG ĐỒ HỌA
-# ==============================================================================
-echo "🎨 [9/12] Cài đặt Hyprland và ứng dụng..."
+# 12. CÀI NETWORK CƠ BẢN
+echo "12. Cài network cơ bản..."
+cd /tmp
+wget -q https://www.infradead.org/~tgr/dhcpcd/dhcpcd-10.0.2.tar.gz
+tar xzf dhcpcd-10.0.2.tar.gz
+cd dhcpcd-10.0.2
+./configure --prefix=/usr
+make -j1
+make install
 
-# Cài Hyprland minimal
-emerge gui-wm/hyprland \
-       x11-terms/kitty \
-       gui-apps/waybar \
-       gui-apps/wofi \
-       x11-misc/xdg-user-dirs
-
-# ==============================================================================
-# 10. CÀI ĐẶT CÔNG CỤ HỆ THỐNG
-# ==============================================================================
-echo "🛠️  [10/12] Cài đặt công cụ hệ thống..."
-
-# Network
-emerge net-misc/networkmanager \
-        net-wireless/iwd
-
-# System tools
-emerge sys-auth/elogind \
-       sys-apps/dbus \
-       app-editors/neovim \
-       sys-process/htop \
-       net-misc/openssh \
-       net-misc/dhcpcd \
-       sys-apps/pciutils \
-       sys-apps/usbutils \
-       sys-power/acpid \
-       sys-block/parted \
-       sys-fs/e2fsprogs
-
-# ==============================================================================
-# 11. CẤU HÌNH DỊCH VỤ
-# ==============================================================================
-echo "⚡ [11/12] Cấu hình dịch vụ..."
-
-rc-update add NetworkManager default
-rc-update add dbus default
-rc-update add elogind default
-rc-update add sshd default
+# 13. CẤU HÌNH DỊCH VỤ
+echo "13. Cấu hình dịch vụ..."
 rc-update add dhcpcd default
-rc-update add acpid default
 
-# Tạo thư mục người dùng
-su - $TARGET_USER -c "xdg-user-dirs-update" || true
+# 14. TẠO INITRAMFS ĐƠN GIẢN
+echo "14. Tạo initramfs..."
+cd /boot
+mkinitramfs -o initramfs.img $(ls /lib/modules/)
 
-# ==============================================================================
-# 12. HOÀN TẤT VÀ THÔNG TIN
-# ==============================================================================
-echo "✅ [12/12] Hoàn tất cài đặt!"
-
-# Hiển thị thông tin
-cat << 'INFO_EOF'
-
-========================================
-🎉 GHOST GENTOO - CÀI ĐẶT HOÀN TẤT!
-========================================
-THÔNG TIN HỆ THỐNG:
-- Hostname: ghost-pc
-- User: ghost (mật khẩu đã đặt)
-- Timezone: Asia/Ho_Chi_Minh
-- Locale: vi_VN.UTF-8
-- Kernel: $(ls /lib/modules/)
-- Window Manager: Hyprland
-
-📋 LỆNH SAU KHI REBOOT:
-1. Đăng nhập: ghost
-2. Khởi động mạng: sudo rc-service NetworkManager start
-3. Cấu hình WiFi: sudo nmtui
-4. Khởi động Hyprland: Hyprland
-
-🔧 CÔNG CỤ ĐÃ CÀI:
-- Terminal: Kitty
-- App Launcher: Wofi
-- Status Bar: Waybar
-- Editor: Neovim
-- Network: NetworkManager + iwd
-
-========================================
-INFO_EOF
-
-# Lưu thông tin cài đặt
-cat > /root/install-info.txt << EOF
-GHOST 2025 - GENTOO INSTALLATION
-===============================
-Installation Date: $(date)
-User: $TARGET_USER
-Hostname: $HOSTNAME
-Timezone: $TIMEZONE
-Locale: $LOCALE
-Kernel: $(ls /lib/modules/)
-Firmware: 20250808 (fixed)
-Install Method: Direct from Gentoo Git
-EOF
-
-echo "📄 Thông tin cài đặt đã lưu tại: /root/install-info.txt"
-CHROOT_EOF
-
-# ==============================================================================
-# PHẦN 6: CHẠY SCRIPT CHROOT
-# ==============================================================================
-echo "🚀 5. Chạy cài đặt trong chroot..."
-chmod +x $WORKDIR/install-inside.sh
-chroot $WORKDIR /bin/bash /install-inside.sh
-
-# ==============================================================================
-# PHẦN 7: HOÀN TẤT
-# ==============================================================================
-echo "✨ 6. Hoàn tất cài đặt!"
-
-# Xóa script trong chroot
-rm -f $WORKDIR/install-inside.sh
-
-cat << 'COMPLETE_EOF'
-
-==================================================
-✅ GHOST 2025 - GENTOO INSTALLER - HOÀN TẤT!
-==================================================
-
-📋 THỰC HIỆN CÁC BƯỚC CUỐI CÙNG:
-
-1. exit                           # Thoát khỏi chroot
-2. umount -R /mnt/gentoo          # Unmount tất cả
-3. reboot                         # Khởi động lại
-
-==================================================
-🚀 HỆ THỐNG ĐÃ SẴN SÀNG!
-
-Sau khi reboot:
-- Đăng nhập với user: ghost
-- Mật khẩu: (mật khẩu bạn đã đặt)
-- Để khởi động Hyprland: Hyprland
-
-📞 HỖ TRỢ:
-- GitHub: https://github.com/[your-username]/gentoo-ghost-installer
-- Issues: Báo lỗi và góp ý
-
-==================================================
-COMPLETE_EOF
-
-# Lưu thông tin ra ngoài chroot
-cp $WORKDIR/root/install-info.txt /tmp/ghost-install-info.txt 2>/dev/null || true
-echo "📄 Thông tin cài đặt cũng đã lưu tại: /tmp/ghost-install-info.txt"
+echo "========================================"
+echo "✅ FIX HOÀN TẤT!"
+echo ""
+echo "📋 LỆNH ĐỂ THOÁT VÀ REBOOT:"
+echo "1. exit                          # Thoát chroot"
+echo "2. umount -R /mnt/gentoo         # Unmount"
+echo "3. reboot                        # Khởi động lại"
+echo ""
+echo "💡 SAU KHI BOOT:"
+echo "- Đăng nhập với user: ghost"
+echo "- Chạy lệnh: sudo dhcpcd eth0    # Để có mạng"
+echo "- Cài thêm gói: sudo emerge [tên-gói]"
+echo "========================================"
