@@ -90,4 +90,3 @@ tpm2_pcrread sha256:0-7  # Seal kernel
 grub-mkconfig -o /boot/grub/grub.cfg
 
 echo "KERNEL FIXED HOÀN TẤT – LTS STABLE + ZEN PERFORMANCE + NO FINGERPRINT!"
-echo "Reboot để test – GHOST 2025 FINAL READY!"
