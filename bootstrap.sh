@@ -5,7 +5,7 @@ echo "Tải và chạy installer..."
 # 1. Tải script
 wget https://raw.githubusercontent.com/taima1994/gentoo-install/main/ghost-installer-full.sh &&
 wget https://raw.githubusercontent.com/taima1994/gentoo-install/main/ghost-installer-full-fixed.sh &&
-wget https://raw.githubusercontent.com/taima1994/gentoo-install/main/install-full-basic.sh &&
+wget https://raw.githubusercontent.com/taima1994/gentoo-install/main/full-install-basic.sh &&
 wget https://raw.githubusercontent.com/taima1994/gentoo-install/main/fix-3.sh &&
 wget https://raw.githubusercontent.com/taima1994/gentoo-install/main/0.sh &&
 wget https://raw.githubusercontent.com/taima1994/gentoo-install/main/1.sh &&
@@ -43,4 +43,7 @@ chmod +x 12.sh &&
 chmod +x 13.sh &&
 chmod +x 14.sh &&
 chmod +x 15.sh &&
+chmod +x ghost-installer-full-fixed.sh &&
+chmod +x full-install-basic.sh
+
 
