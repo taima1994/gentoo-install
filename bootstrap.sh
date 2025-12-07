@@ -24,4 +24,21 @@ wget https://raw.githubusercontent.com/taima1994/gentoo-install/main/15.sh
 
 # 2. Cấp quyền thực thi
 chmod +x ghost-installer-full.sh
+chmod +x fix-3.sh
+chmod +x 0.sh
+chmod +x 1.sh
+chmod +x 2.sh
+chmod +x 3.sh
+chmod +x 4.sh
+chmod +x 5.sh
+chmod +x 6.sh
+chmod +x 7.sh
+chmod +x 8.sh
+chmod +x 9.sh
+chmod +x 10.sh
+chmod +x 11.sh
+chmod +x 12.sh
+chmod +x 13.sh
+chmod +x 14.sh
+chmod +x 15.sh
 
