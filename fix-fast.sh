@@ -1,1 +1,0 @@
-mkdir -p /etc/portage/package.mask
