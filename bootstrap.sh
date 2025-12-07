@@ -3,10 +3,10 @@ set -e
 echo "GHOST 2025 - GENTOO INSTALL"
 echo "Tải và chạy installer..."
 # 1. Tải script
-wget https://raw.githubusercontent.com/taima1994/gentoo-install/main/bootstrap.sh
+wget https://raw.githubusercontent.com/taima1994/gentoo-install/main/ghost-installer-full.sh
 
 # 2. Cấp quyền thực thi
-chmod +x bootstrap.sh
+chmod +x ghost-installer-full.sh
 
 # 3. Chạy với quyền root
-sudo ./bootstrap.sh
+sudo ./ghost-installer-full.sh
