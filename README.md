@@ -4,10 +4,10 @@
 Từ **Gentoo Minimal LiveCD**, chạy lệnh:
 ```bash
 # 1. Tải script
-wget https://raw.githubusercontent.com/taima1994/gentoo-ghost-installer/main/ghost-install.sh
+wget https://raw.githubusercontent.com/taima1994/gentoo-install/main/bootstrap.sh
 
 # 2. Cấp quyền thực thi
-chmod +x ghost-install.sh
+chmod +x bootstrap.sh
 
 # 3. Chạy với quyền root
-sudo ./ghost-install.sh
+sudo ./bootstrap.sh
