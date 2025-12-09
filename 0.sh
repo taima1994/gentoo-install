@@ -1,12 +1,22 @@
-# 0. Oracle forecast lỗi preemptive (Torch + qutip predict risk 95%)
-python3 - << 'PY'
-try:
-    import torch
-    import qutip as qt
-    dm = qt.rand_dm(8)
-    probs = torch.tensor(dm.full().real)
-    pred = probs.mean().item()
-    print(f"ORACLE PREDICT: Installer risk {pred:.2f} – Fixed mode activated")
-except ImportError as e:
-    print(f"ORACLE Fallback: Missing libs – auto-fix in step 1")
-PY
+# 1.1 Boot từ USB/LiveCD
+# Chọn option boot phù hợp với UEFI/Legacy
+
+# 1.2 Kiểm tra kết nối mạng
+ping -c 3 google.com
+
+# 1.3 Nếu dùng WiFi
+iwctl
+# Trong iwctl:
+station wlan0 scan
+station wlan0 get-networks
+station wlan0 connect [SSID]
+# Nhập password nếu có
+
+# 1.4 Kiểm tra lại
+ip addr show
+ping -c 3 gentoo.org
+
+# 1.5 Cập nhật date/time
+date
+# Nếu sai:
+ntpd -q -g
