@@ -16,14 +16,14 @@ echo "[GHOST] Initializing v2.1... Mirror: $MIRROR, Chaos: $CHAOS"
 # Adaptive Mirror Config (New: Geo-boost for VN)
 case $MIRROR in
   vietnam)
-    STAGE3_URL="https://mirror.meowsmp.net/gentoo/releases/amd64/autobuilds/current-stage3-amd64-hardened-selinux-openrc/stage3-amd64-hardened-selinux-openrc-*.tar.xz"
-    SYNC_RSYNC="rsync://mirror.meowsmp.net/gentoo-portage"
-    GENTOO_MIRRORS="https://mirror.meowsmp.net/gentoo https://mirror.kirbee.tech/gentoo"  # Fallback Haiphong
+    STAGE3_URL="https://mirror.meowsmp.net/gentoo/releases/amd64/autobuilds/current-stage3-amd64-hardened-selinux-openrc/stage3-amd64-hardened-selinux-openrc-20251130T164554Z.tar.xz"
+    SYNC_RSYNC="rsync://mirror.meowsmp.net/gentoo/snapshots/portage-latest.tar.xz"
+    GENTOO_MIRRORS="https://mirror.meowsmp.net/gentoo/"  # Fallback Haiphong
     echo "[GHOST] VN Mirror Activated: 1000 Mb/s Hanoi + Fallback"
     ;;
   global)
-    STAGE3_URL="https://distfiles.gentoo.org/releases/amd64/autobuilds/current-stage3-amd64-hardened/stage3-amd64-hardened-*.tar.xz"
-    SYNC_RSYNC="rsync://rsync.gentoo.org/gentoo-portage"
+    STAGE3_URL="https://distfiles.gentoo.org/releases/amd64/autobuilds/current-stage3-amd64-hardened-selinux-openrc/stage3-amd64-hardened-selinux-openrc-20251130T164554Z.tar.xz"
+    SYNC_RSYNC="rsync://distfiles.gentoo.org/snapshots/portage-latest.tar.xz"
     GENTOO_MIRRORS="https://distfiles.gentoo.org"
     ;;
 esac
@@ -87,7 +87,7 @@ print(f'Forecast: Mirror latency ~{latency:.2f}s - {'VN Fast' if latency < 0.5 e
 "  # Inline AI check
 
 wget -q --tries=3 --timeout=30 $STAGE3_URL -O /tmp/stage3.tar.xz || {
-  echo "[GHOST] Fallback to alt mirror"; wget -q https://mirror.kirbee.tech/gentoo/releases/amd64/autobuilds/current-stage3-amd64-hardened/stage3-amd64-hardened-*.tar.xz -O /tmp/stage3.tar.xz;
+  echo "[GHOST] Fallback to alt mirror"; wget -q https://mirror.meowsmp.net/gentoo/releases/amd64/autobuilds/current-stage3-amd64-hardened-selinux-openrc/stage3-amd64-hardened-selinux-openrc-20251130T164554Z.tar.xz -O /tmp/stage3.tar.xz;
 }
 
 tar xpf /tmp/stage3.tar.xz -C /mnt/gentoo --xattrs-include="*.*" --numeric-owner
