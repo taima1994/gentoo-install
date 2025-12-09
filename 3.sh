@@ -1,9 +1,14 @@
-# 3. Tải stage3 (link của ní + fallback mirror) + verify SHA512 + GPG
-echo "3. TẢI STAGE3 + VERIFY..."
-cd /mnt/gentoo
-STAGE3="stage3-amd64-hardened-selinux-openrc-20251130T164554Z.tar.xz"
-wget -c https://distfiles.gentoo.org/releases/amd64/autobuilds/current-stage3-amd64-hardened-selinux-openrc/$STAGE3 || wget -c https://mirror.meowsmp.net/gentoo/releases/amd64/autobuilds/current-stage3-amd64-hardened-selinux-openrc/$STAGE3
-wget -c https://mirror.meowsmp.net/gentoo/snapshots/portage-latest.tar.xz
-tar xpf $STAGE3 --xattrs-include="*.*" --numeric-owner
-tar xpf portage-latest.tar.xz -C usr
-echo "STAGE3 + PORTAGE TẢI XONG!"
+# 4.1 Sao chép DNS info
+cp -L /etc/resolv.conf /mnt/gentoo/etc/
+
+# 4.2 Mount các filesystem cần thiết
+mount --types proc /proc /mnt/gentoo/proc
+mount --rbind /sys /mnt/gentoo/sys
+mount --make-rslave /mnt/gentoo/sys
+mount --rbind /dev /mnt/gentoo/dev
+mount --make-rslave /mnt/gentoo/dev
+
+# 4.3 Chroot vào hệ thống mới
+chroot /mnt/gentoo /bin/bash
+source /etc/profile
+export PS1="(chroot) ${PS1}"
