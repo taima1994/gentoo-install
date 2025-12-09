@@ -2,23 +2,6 @@
 wipefs -a /dev/sda
 wipefs -a /dev/sdb
 
-cfdisk /dev/sdb
-
-# Tạo partition table GPT (cho UEFI)
-# 1. /dev/sdb1: 1G, Type: EFI System (cho UEFI)
-#    Nếu BIOS thì 512M, Type: BIOS boot
-# 2. /dev/sdb2: 16G, Type: Linux swap
-# 3. /dev/sdb3: 50G, Type: Linux filesystem (cho /)
-# 4. /dev/sdb4: 150G, Type: Linux filesystem (cho /var/tmp/portage)
-
-cfdisk /dev/sda
-
-# Partition table: GPT hoặc MBR đều được
-# 1. /dev/sda1: 200G, Type: Linux filesystem (cho /home)
-# 2. /dev/sda2: 100G, Type: Linux filesystem (cho /var/cache/binpkgs)
-# 3. /dev/sda3: 50G, Type: Linux filesystem (cho /var/db/repos/gentoo)
-# 4. /dev/sda4: 580G, Type: Linux filesystem (cho /mnt/iso-storage)
-
 # SSD partitions
 mkfs.fat -F 32 /dev/sdb1          # boot (UEFI)
 mkswap /dev/sdb2                  # swap
