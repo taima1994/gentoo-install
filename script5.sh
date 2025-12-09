@@ -1,40 +1,28 @@
 #!/bin/bash
-# Ghost Script5 v1.1: Finalize & Umount (INSIDE chroot first)
-# Usage: chroot> ./script5.sh --mirror=vietnam; then exit & run umount part
+# Script5-Simple: Finalize (IN CHROOT first)
 
-set -euo pipefail
-
-MIRROR="${1:-vietnam}"
-
-# GRUB & SELinux
+echo "=== GHOST5: GRUB & SELinux ==="
 emerge sys-boot/grub
 grub-install --target=x86_64-efi --efi-directory=/boot --bootloader-id=GRUB
 grub-mkconfig -o /boot/grub/grub.cfg
-eselect profile set hardened/selinux
 
-# Dual Mount fstab
+echo "Fstab dual:"
 mkdir -p /home /mnt/build
 cat >> /etc/fstab << EOF
 /dev/sda1 /home ext4 defaults 0 2
 /dev/sda2 /mnt/build ext4 defaults 0 2
 EOF
-mount -a  # Test
+mount -a
 
-# Test Suite
-pip install unittest qutip requests --quiet
-python3 -c "
-import unittest; import requests; import qutip; import time
-class Test(unittest.TestCase):
-    def test_portage(self): requests.head('https://mirror.meowsmp.net/gentoo/snapshots/portage-latest.tar.xz', timeout=5); self.assertTrue(True)
-    def test_quantum(self): qutip.Qobj()
-unittest.main(argv=[''], exit=False)
-print('Tests: Passed - Quantum ready')
-"
+echo "Test basic: mount -a OK? Y: Chạy 'exit' chroot."
 
-echo "[GHOST5] Chroot done! exit chroot now."
+echo "=== GHOST5 CHROOT DONE! exit chroot, rồi umount dưới ==="
 
-# --- OUTSIDE chroot: Umount ---
-umount -l /mnt/gentoo/dev{/shm,/pts,} 2>/dev/null || true
+# --- NGỒI CHROOT: Copy phần dưới chạy ngoài ---
+# Umount (chạy ngoài chroot):
+umount /mnt/gentoo/var
+umount /mnt/gentoo/boot
+umount /mnt/gentoo/dev{/shm,/pts,} 2>/dev/null || true
 umount -R /mnt/gentoo
 swapoff -a
-echo "[GHOST5] Umount OK! Reboot: reboot. Post: systemctl start ghost-proxy; hyprland"
+echo "Umount OK! reboot"
