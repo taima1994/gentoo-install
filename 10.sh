@@ -1,14 +1,12 @@
-# 10.1 Thêm user
-useradd -m -G users,wheel,audio,video -s /bin/bash [username]
-passwd [username]
+# Add user
+useradd -m -G wheel,audio,video -s /bin/bash long
+passwd long
 
-# 10.2 Cấu hình sudo
-visudo
-# Bỏ comment dòng: %wheel ALL=(ALL) ALL
+# Sudo
+emerge --ask app-admin/sudo
+echo "%wheel ALL=(ALL) ALL" >> /etc/sudoers
 
-# 10.3 Thoát chroot
-exit
-cd
-umount -l /mnt/gentoo/dev{/shm,/pts,}
-umount -R /mnt/gentoo
-reboot
+# Services
+emerge --ask sys-process/cronie net-misc/openssh
+rc-update add cronie default
+rc-update add sshd default
