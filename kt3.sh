@@ -1,9 +1,9 @@
-# Chroot vào hệ thống
+
+# Chroot vào
 mount /dev/sdb3 /mnt/gentoo
 mount /dev/sdb1 /mnt/gentoo/boot
-mount /dev/sdb4 /mnt/gentoo/var/tmp/portage
+mount /dev/sda1 /mnt/gentoo/home
 # ... mount các phần còn lại
 
 chroot /mnt/gentoo /bin/bash
 source /etc/profile
-export PS1="(chroot) $PS1"
