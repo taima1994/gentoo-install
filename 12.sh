@@ -1,5 +1,3 @@
-# Thoát chroot
-exit
 
 # Unmount theo thứ tự
 umount /mnt/gentoo/var/tmp/portage
