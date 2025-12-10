@@ -1,43 +1,82 @@
 #!/bin/bash
-set -e
-echo "GHOST 2025 - GENTOO INSTALLER (SIMPLE VERSION)"
-echo "=============================================="
+# AUTO PARTITION FOR GENTOO BUILD SYSTEM
+# SSD: sdb (223G) - HDD: sda (931G)
 
-# Phần 1: Phân vùng đơn giản như Tecmint
-echo "1. Phân vùng đơn giản..."
+echo "=== GENTOO AUTO PARTITION SCRIPT ==="
+echo "WARNING: This will DESTROY ALL DATA on /dev/sda and /dev/sdb!"
+read -p "Continue? (type 'YES' to confirm): " confirm
+
+if [ "$confirm" != "YES" ]; then
+    echo "Aborted."
+    exit 1
+fi
+
+echo "=== STEP 1: Clean disks ==="
+wipefs -a /dev/sda
+wipefs -a /dev/sdb
+partprobe
+
+echo "=== STEP 2: Partition SSD (sdb) ==="
+# GPT table for UEFI
+parted -s /dev/sdb mklabel gpt
+# 1G boot
+parted -s /dev/sdb mkpart primary fat32 1MiB 1025MiB
+parted -s /dev/sdb set 1 esp on
+# 16G swap
+parted -s /dev/sdb mkpart primary linux-swap 1025MiB 17409MiB
+# 50G root
+parted -s /dev/sdb mkpart primary ext4 17409MiB 68609MiB
+# Rest for portage temp
+parted -s /dev/sdb mkpart primary ext4 68609MiB 100%
+
+echo "=== STEP 3: Partition HDD (sda) ==="
 parted -s /dev/sda mklabel gpt
-parted -s /dev/sda mkpart primary 1MiB 201MiB
-parted -s /dev/sda set 1 boot on
-parted -s /dev/sda mkpart primary 201MiB 100%
+# 200G home
+parted -s /dev/sda mkpart primary ext4 1MiB 200GiB
+# 100G binpkgs
+parted -s /dev/sda mkpart primary ext4 200GiB 300GiB
+# 50G portage tree
+parted -s /dev/sda mkpart primary ext4 300GiB 350GiB
+# Rest for ISO storage
+parted -s /dev/sda mkpart primary ext4 350GiB 100%
 
-# Phần 2: Format và mount
-echo "2. Format và mount..."
-mkfs.fat -F 32 /dev/sda1
-mkfs.ext4 /dev/sda2
-mount /dev/sda2 /mnt/gentoo
-mkdir /mnt/gentoo/boot
-mount /dev/sda1 /mnt/gentoo/boot
+echo "=== STEP 4: Format partitions ==="
+# SSD
+mkfs.fat -F 32 /dev/sdb1
+mkswap /dev/sdb2
+swapon /dev/sdb2
+mkfs.ext4 -F /dev/sdb3
+mkfs.ext4 -F /dev/sdb4
+# HDD
+mkfs.ext4 -F /dev/sda1
+mkfs.ext4 -F /dev/sda2
+mkfs.ext4 -F /dev/sda3
+mkfs.ext4 -F /dev/sda4
 
-# Root trước
+echo "=== STEP 5: Optimize SSD ==="
+tune2fs -o discard /dev/sdb3
+tune2fs -o discard /dev/sdb4
+
+echo "=== STEP 6: Mount everything ==="
 mount /dev/sdb3 /mnt/gentoo
-
-# Tạo thư mục và mount boot
-mkdir -p /mnt/gentoo/boot
+mkdir -p /mnt/gentoo/{boot,var/tmp/portage,home,var/cache/binpkgs,var/db/repos,mnt/iso-storage}
 mount /dev/sdb1 /mnt/gentoo/boot
-
-# Tạo và mount thư mục portage temp (SSD - để build nhanh)
-mkdir -p /mnt/gentoo/var/tmp/portage
 mount /dev/sdb4 /mnt/gentoo/var/tmp/portage
-
-# Mount HDD partitions
-mkdir -p /mnt/gentoo/home
 mount /dev/sda1 /mnt/gentoo/home
-
-mkdir -p /mnt/gentoo/var/cache/binpkgs
 mount /dev/sda2 /mnt/gentoo/var/cache/binpkgs
-
-mkdir -p /mnt/gentoo/var/db/repos/gentoo
-mount /dev/sda3 /mnt/gentoo/var/db/repos/gentoo
-
-mkdir -p /mnt/gentoo/mnt/iso-storage
+mount /dev/sda3 /mnt/gentoo/var/db/repos
 mount /dev/sda4 /mnt/gentoo/mnt/iso-storage
+
+echo "=== STEP 7: Verify ==="
+lsblk
+df -h
+
+echo "=== DONE! Partitions ready. ==="
+echo "Boot: /dev/sdb1 (1G)"
+echo "Swap: /dev/sdb2 (16G)"
+echo "Root: /dev/sdb3 (50G)"
+echo "Portage temp: /dev/sdb4 (150G)"
+echo "Home: /dev/sda1 (200G)"
+echo "Binary cache: /dev/sda2 (100G)"
+echo "Portage tree: /dev/sda3 (50G)"
+echo "ISO storage: /dev/sda4 (580G)"
