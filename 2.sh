@@ -1,7 +1,12 @@
-# 3.1 Chuyển vào thư mục mount
-cd /mnt/gentoo
-# 3.3 Tải stage3
-wget https://gentoo.osuosl.org/releases/amd64/autobuilds/current-stage3-amd64-hardened-selinux-openrc/stage3-amd64-hardened-selinux-openrc-20251130T164554Z.tar.xz
+# 7. KIỂM TRA FSTAB
+cat /etc/fstab
 
-# 3.4 Giải nén
-tar xpvf stage3-*.tar.xz --xattrs-include='*.*' --numeric-owner
+# 8. KIỂM TRA MOUNT TRONG CHROOT
+mount | grep -E "(boot|home|var/tmp/portage)"
+
+# 9. REINSTALL GRUB (CHO CHẮC)
+grub-install --target=x86_64-efi --efi-directory=/boot
+grub-mkconfig -o /boot/grub/grub.cfg
+
+# 10. KIỂM TRA BOOT FILES
+ls -la /boot/
