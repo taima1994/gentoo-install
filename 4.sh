@@ -7,4 +7,4 @@ emerge-webrsync
 # 4.6 Chọn profile
 eselect profile list
 # Chọn profile (VD: default/linux/amd64/17.1/desktop)
-eselect profile set [NUMBER]
+eselect profile set 1
