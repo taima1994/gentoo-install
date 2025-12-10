@@ -1,23 +1,22 @@
-# Xóa bảng phân vùng cũ (CHỈ LÀM NẾU KHÔNG CÓ DATA QUAN TRỌNG)
-wipefs -a /dev/sda
-wipefs -a /dev/sdb
+#!/bin/bash
+set -e
+echo "GHOST 2025 - GENTOO INSTALLER (SIMPLE VERSION)"
+echo "=============================================="
 
-# SSD partitions
-mkfs.fat -F 32 /dev/sdb1          # boot (UEFI)
-mkswap /dev/sdb2                  # swap
-swapon /dev/sdb2
-mkfs.ext4 /dev/sdb3               # root
-mkfs.ext4 /dev/sdb4               # portage temp
+# Phần 1: Phân vùng đơn giản như Tecmint
+echo "1. Phân vùng đơn giản..."
+parted -s /dev/sda mklabel gpt
+parted -s /dev/sda mkpart primary 1MiB 201MiB
+parted -s /dev/sda set 1 boot on
+parted -s /dev/sda mkpart primary 201MiB 100%
 
-# HDD partitions
-mkfs.ext4 /dev/sda1               # home
-mkfs.ext4 /dev/sda2               # binpkgs cache
-mkfs.ext4 /dev/sda3               # portage tree
-mkfs.ext4 /dev/sda4               # iso storage
-
-# Tối ưu ext4 cho SSD (noatime, discard)
-tune2fs -o discard /dev/sdb3
-tune2fs -o discard /dev/sdb4
+# Phần 2: Format và mount
+echo "2. Format và mount..."
+mkfs.fat -F 32 /dev/sda1
+mkfs.ext4 /dev/sda2
+mount /dev/sda2 /mnt/gentoo
+mkdir /mnt/gentoo/boot
+mount /dev/sda1 /mnt/gentoo/boot
 
 # Root trước
 mount /dev/sdb3 /mnt/gentoo
