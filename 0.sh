@@ -2,17 +2,9 @@
 # Chọn option boot phù hợp với UEFI/Legacy
 
 # 1.2 Kiểm tra kết nối mạng
-ping -c 3 google.com
+ping -c 4 google.com
 
-# 1.3 Nếu dùng WiFi
-iwctl
-# Trong iwctl:
-station wlan0 scan
-station wlan0 get-networks
-station wlan0 connect [SSID]
-# Nhập password nếu có
-
-# 1.4 Kiểm tra lại
+# 1.3 Kiểm tra lại
 ip addr show
 ping -c 3 gentoo.org
 
