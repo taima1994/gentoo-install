@@ -80,16 +80,11 @@ mount /dev/sda2 /mnt/gentoo/var/cache/binpkgs
 mount /dev/sda3 /mnt/gentoo/var/db/repos
 mount /dev/sda4 /mnt/gentoo/mnt/iso-storage
 
-echo "=== STEP 7: Verify ==="
-lsblk
-df -h
+# 3.1 Chuyển vào thư mục mount
+cd /mnt/gentoo
+# 3.3 Tải stage3
+wget https://gentoo.osuosl.org/releases/amd64/autobuilds/current-stage3-amd64-hardened-selinux-openrc/stage3-amd64-hardened-selinux-openrc-20251130T164554Z.tar.xz
 
-echo "=== DONE! Partitions ready. ==="
-echo "Boot: /dev/sdb1 (1G)"
-echo "Swap: /dev/sdb2 (16G)"
-echo "Root: /dev/sdb3 (50G)"
-echo "Portage temp: /dev/sdb4 (150G)"
-echo "Home: /dev/sda1 (200G)"
-echo "Binary cache: /dev/sda2 (100G)"
-echo "Portage tree: /dev/sda3 (50G)"
-echo "ISO storage: /dev/sda4 (580G)"
+# 3.4 Giải nén
+tar xpvf stage3-*.tar.xz --xattrs-include='*.*' --numeric-owner
+
