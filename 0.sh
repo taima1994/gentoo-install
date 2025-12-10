@@ -10,5 +10,3 @@ ping -c 3 gentoo.org
 
 # 1.5 Cập nhật date/time
 date
-# Nếu sai:
-ntpd -q -g
