@@ -1,3 +1,5 @@
+sudo nano ~/.config/nixpkgs/home.nix
+
 { config, pkgs, ... }:
 
 {
@@ -74,3 +76,6 @@
     };
   };
 }
+
+# Cài đặt Home Manager nếu chưa có
+nix-shell -p home-manager --run "home-manager switch"
