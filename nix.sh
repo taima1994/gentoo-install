@@ -1,81 +1,48 @@
-sudo nano ~/.config/nixpkgs/home.nix
+cat > ~/setup-hyprland.sh << 'EOF'
+#!/bin/bash
 
-{ config, pkgs, ... }:
+# Clone dotfiles
+mkdir -p ~/nixos-dotfiles/config
+cd ~/nixos-dotfiles/config
+git clone https://github.com/tonybanters/hypr
+git clone https://github.com/tonybanters/waybar
+git clone https://github.com/tonybanters/foot
 
+# Link configs
+cd ~/.config
+ln -sf ~/nixos-dotfiles/config/hypr hypr
+ln -sf ~/nixos-dotfiles/config/waybar waybar
+ln -sf ~/nixos-dotfiles/config/foot foot
+
+# Set monitor resolution
+echo "monitor=,1920x1080,auto,1" >> ~/.config/hypr/hyprland.conf
+
+# Create minimal flake
+cd ~/nixos-dotfiles
+cat > flake.nix << 'FLAKE'
 {
-  home.username = "ghost";
-  home.homeDirectory = "/home/ghost";
-  home.stateVersion = "25.05";
-
-  # Các ứng dụng cơ bản
-  home.packages = with pkgs; [
-    # Terminal
-    kitty
-    alacritty
-    foot
-    
-    # Utilities
-    git
-    htop
-    neofetch
-    bat
-    eza
-    fzf
-    ripgrep
-    
-    # File manager
-    nautilus
-    ranger
-    
-    # Browser
-    firefox
-    google-chrome
-    
-    # Media
-    vlc
-    mpv
-    
-    # Documents
-    libreoffice
-    zathura
-    
-    # Graphics
-    gimp
-    inkscape
-    
-    # Communication
-    telegram-desktop
-    discord
-  ];
-
-  # Cấu hình Git
-  programs.git = {
-    enable = true;
-    userName = "Ghost";
-    userEmail = "ghost@localhost";
-  };
-
-  # Cấu hình Bash/Zsh
-  programs.bash = {
-    enable = true;
-    shellAliases = {
-      ll = "ls -la";
-      update = "sudo nixos-rebuild switch";
-      clean = "sudo nix-collect-garbage -d";
-    };
-  };
-
-  # Cấu hình terminal (Kitty)
-  programs.kitty = {
-    enable = true;
-    theme = "Catppuccin-Mocha";
-    settings = {
-      font_family = "JetBrainsMono Nerd Font";
-      font_size = "12";
-      background_opacity = "0.9";
+  description = "Hyprland config";
+  inputs.nixpkgs.url = "nixpkgs/nixos-unstable";
+  outputs = { self, nixpkgs, ... }: {
+    nixosConfigurations.hyprland-btw = nixpkgs.lib.nixosSystem {
+      system = "x86_64-linux";
+      modules = [ ./configuration.nix ];
     };
   };
 }
+FLAKE
 
-# Cài đặt Home Manager nếu chưa có
-nix-shell -p home-manager --run "home-manager switch"
+# Create basic config
+cat > configuration.nix << 'CONFIG'
+{ config, pkgs, ... }: {
+  programs.hyprland.enable = true;
+  services.xserver.displayManager.sddm.enable = true;
+}
+CONFIG
+
+echo "Done! Run: sudo nixos-rebuild switch --flake ~/nixos-dotfiles#hyprland-btw"
+EOF
+
+# Chạy script
+chmod +x ~/setup-hyprland.sh
+./setup-hyprland.sh
