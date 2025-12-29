@@ -1,3 +1,5 @@
+sudo nano ~/.config/nixpkgs/home.nix
+
 { config, pkgs, ... }:
 
 {
