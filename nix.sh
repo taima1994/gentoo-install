@@ -17,6 +17,8 @@ sudo mount /dev/sdc2 /mnt
 sudo mkdir -p /mnt/boot
 sudo mount /dev/sdc1 /mnt/boot
 
+sudo mkdir -p /mnt/etc
+
 echo "=== CLONE REPO ==="
 cd /mnt/etc
 sudo rm -rf nixos
