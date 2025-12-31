@@ -1,48 +1,68 @@
-# 5. CHROOT VÀO
-chroot /mnt/gentoo /bin/bash
-source /etc/profile
-export PS1="(chroot) $PS1"
+# Kiểm tra Hyprland đã cài chưa
+which hyprctl
 
-# 6. FIX FSTAB TỰ ĐỘNG
-cat > /tmp/fix-fstab.sh << 'EOF'
-#!/bin/bash
-echo "Fixing /etc/fstab..."
+# Tạo thư mục config nếu chưa có
+mkdir -p ~/.config/hypr
 
-# Backup old fstab
-cp /etc/fstab /etc/fstab.backup
+# Tạo file config tối thiểu
+cat > ~/.config/hypr/hyprland.conf << 'EOF'
+# Monitor
+monitor=,preferred,auto,1
 
-# Create new fstab with correct UUIDs
-cat > /etc/fstab << 'FSTAB_EOF'
-# /etc/fstab: static file system information
+# Autostart - QUAN TRỌNG: thêm terminal vào đây
+exec-once = kitty
+exec-once = waybar
+exec-once = nm-applet --indicator
 
-# ROOT - SSD sdb3
-$(blkid /dev/sdb3 -s UUID -o value) / ext4 defaults,noatime,discard 0 1
+# Input
+input {
+    kb_layout = us
+    follow_mouse = 1
+    touchpad {
+        natural_scroll = no
+    }
+}
 
-# BOOT - SSD sdb1  
-$(blkid /dev/sdb1 -s UUID -o value) /boot vfat defaults,noatime 0 2
+# General
+general {
+    gaps_in = 5
+    gaps_out = 10
+    border_size = 2
+    col.active_border = rgba(89b4faee)
+    col.inactive_border = rgba(313244aa)
+}
 
-# SWAP - SSD sdb2
-/dev/sdb2 none swap sw 0 0
+# Keybindings - QUAN TRỌNG: phải đúng cú pháp
+$mainMod = SUPER
 
-# PORTAGE TEMP - SSD sdb4
-$(blkid /dev/sdb4 -s UUID -o value) /var/tmp/portage ext4 defaults,noatime,discard 0 2
+# Terminal - THÊM 2 PHÍM TẮT CHO CHẮC
+bind = $mainMod, RETURN, exec, kitty
+bind = $mainMod, T, exec, foot
+bind = $mainMod, A, exec, alacritty
 
-# HOME - HDD sda1
-$(blkid /dev/sda1 -s UUID -o value) /home ext4 defaults,noatime 0 2
+# Applications
+bind = $mainMod, Q, killactive
+bind = $mainMod, E, exec, nemo
+bind = $mainMod, D, exec, rofi -show drun
+bind = $mainMod, F, fullscreen
 
-# BINPKGS - HDD sda2
-$(blkid /dev/sda2 -s UUID -o value) /var/cache/binpkgs ext4 defaults,noatime 0 2
+# System
+bind = $mainMod SHIFT, Q, exit
+bind = $mainMod SHIFT, R, exec, hyprctl reload
+bind = $mainMod, L, exec, swaylock
 
-# PORTAGE TREE - HDD sda3
-$(blkid /dev/sda3 -s UUID -o value) /var/db/repos ext4 defaults,noatime 0 2
+# Window focus
+bind = $mainMod, left, movefocus, l
+bind = $mainMod, right, movefocus, r
+bind = $mainMod, up, movefocus, u
+bind = $mainMod, down, movefocus, d
 
-# ISO STORAGE - HDD sda4
-$(blkid /dev/sda4 -s UUID -o value) /mnt/iso-storage ext4 defaults,noatime 0 2
-FSTAB_EOF
+# Workspaces
+bind = $mainMod, 1, workspace, 1
+bind = $mainMod, 2, workspace, 2
+bind = $mainMod, 3, workspace, 3
 
-echo "New fstab created:"
-cat /etc/fstab
+# Mouse
+bindm = $mainMod, mouse:272, movewindow
+bindm = $mainMod, mouse:273, resizewindow
 EOF
-
-chmod +x /tmp/fix-fstab.sh
-/tmp/fix-fstab.sh
