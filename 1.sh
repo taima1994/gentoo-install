@@ -1,10 +1,32 @@
-# Kiểm tra terminal nào có sẵn
-which kitty && echo "Kitty OK"
-which foot && echo "Foot OK" 
-which alacritty && echo "Alacritty OK"
+{
+  inputs = {
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
 
-# Nếu không có terminal nào, cài ngay
-sudo nixos-rebuild switch
+    home-manager = {
+      url = "github:nix-community/home-manager";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
 
-# Hoặc cài tạm qua nix-shell
-nix-shell -p kitty --run "kitty"
+    hyprland.url = "github:hyprwm/Hyprland";
+  };
+
+  outputs = { self, nixpkgs, home-manager, hyprland, ... }:
+  let
+    system = "x86_64-linux";
+  in {
+    nixosConfigurations.hypr = nixpkgs.lib.nixosSystem {
+      inherit system;
+      modules = [
+        ./configuration.nix
+        ./hardware-configuration.nix
+
+        home-manager.nixosModules.home-manager
+        {
+          home-manager.useGlobalPkgs = true;
+          home-manager.useUserPackages = true;
+          home-manager.users.youruser = import ./home.nix;
+        }
+      ];
+    };
+  };
+}
