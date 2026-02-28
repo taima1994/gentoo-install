@@ -1,68 +1,22 @@
-# Kiểm tra Hyprland đã cài chưa
-which hyprctl
+# 1. Chấp nhận từ khóa không ổn định cho các gói cần thiết
+mkdir -p /etc/portage/package.accept_keywords
+cat > /etc/portage/package.accept_keywords/hyprland << EOF
+gui-wm/hyprland ~amd64
+gui-libs/xdg-desktop-portal-hyprland ~amd64
+dev-qt/qtbase ~amd64
+dev-qt/qtwayland ~amd64
+dev-qt/qtdeclarative ~amd64
+dev-qt/qtshadertools ~amd64
+EOF
 
-# Tạo thư mục config nếu chưa có
-mkdir -p ~/.config/hypr
+# 2. Bỏ mask (unmask) một số gói Qt nếu cần (dựa theo hướng dẫn mới nhất [citation:5])
+mkdir -p /etc/portage/profile
+echo -e "dev-qt/qtbase\ndev-qt/qtwayland\ndev-qt/qtdeclarative\ndev-qt/qtshadertools" >> /etc/portage/profile/package.unmask
 
-# Tạo file config tối thiểu
-cat > ~/.config/hypr/hyprland.conf << 'EOF'
-# Monitor
-monitor=,preferred,auto,1
-
-# Autostart - QUAN TRỌNG: thêm terminal vào đây
-exec-once = kitty
-exec-once = waybar
-exec-once = nm-applet --indicator
-
-# Input
-input {
-    kb_layout = us
-    follow_mouse = 1
-    touchpad {
-        natural_scroll = no
-    }
-}
-
-# General
-general {
-    gaps_in = 5
-    gaps_out = 10
-    border_size = 2
-    col.active_border = rgba(89b4faee)
-    col.inactive_border = rgba(313244aa)
-}
-
-# Keybindings - QUAN TRỌNG: phải đúng cú pháp
-$mainMod = SUPER
-
-# Terminal - THÊM 2 PHÍM TẮT CHO CHẮC
-bind = $mainMod, RETURN, exec, kitty
-bind = $mainMod, T, exec, foot
-bind = $mainMod, A, exec, alacritty
-
-# Applications
-bind = $mainMod, Q, killactive
-bind = $mainMod, E, exec, nemo
-bind = $mainMod, D, exec, rofi -show drun
-bind = $mainMod, F, fullscreen
-
-# System
-bind = $mainMod SHIFT, Q, exit
-bind = $mainMod SHIFT, R, exec, hyprctl reload
-bind = $mainMod, L, exec, swaylock
-
-# Window focus
-bind = $mainMod, left, movefocus, l
-bind = $mainMod, right, movefocus, r
-bind = $mainMod, up, movefocus, u
-bind = $mainMod, down, movefocus, d
-
-# Workspaces
-bind = $mainMod, 1, workspace, 1
-bind = $mainMod, 2, workspace, 2
-bind = $mainMod, 3, workspace, 3
-
-# Mouse
-bindm = $mainMod, mouse:272, movewindow
-bindm = $mainMod, mouse:273, resizewindow
+# 3. Thiết lập USE flags bắt buộc
+mkdir -p /etc/portage/package.use
+cat > /etc/portage/package.use/hyprland << EOF
+dev-qt/qtbase opengl egl eglfs gles2-only
+dev-qt/qtdeclarative opengl
+sys-apps/xdg-desktop-portal screencast
 EOF
