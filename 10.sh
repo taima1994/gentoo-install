@@ -1,12 +1,8 @@
-# Add user
-useradd -m -G wheel,audio,video -s /bin/bash long
-passwd long
-
-# Sudo
-emerge --ask app-admin/sudo
-echo "%wheel ALL=(ALL) ALL" >> /etc/sudoers
-
-# Services
-emerge --ask sys-process/cronie net-misc/openssh
-rc-update add cronie default
-rc-update add sshd default
+mkdir -p /usr/share/wayland-sessions
+cat > /usr/share/wayland-sessions/hyprland.desktop << EOF
+[Desktop Entry]
+Name=Hyprland
+Comment=An intelligent dynamic tiling Wayland compositor
+Exec=Hyprland
+Type=Application
+EOF
